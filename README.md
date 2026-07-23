@@ -1,11 +1,16 @@
 <div align="center">
 
-# StartupLens AI
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+  <img src="assets/logo.svg" alt="StartupLens" width="420">
+</picture>
+
+<br/>
 
 **Give it a startup idea. Fifteen specialized agents in five parallel teams research the market, map the competition and investors, score the moat, and design a go to market plan, live, in minutes.**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
-[![Next.js]](https://nextjs.org/)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
 [![LangGraph](<https://img.shields.io/badge/LangGraph-Send()%20fan%20out-orange>)](https://github.com/langchain-ai/langgraph)
 [![MCP](https://img.shields.io/badge/MCP-tools-purple)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
