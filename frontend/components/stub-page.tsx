@@ -9,10 +9,10 @@ export function StubPage({
 }) {
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="text-2xl font-semibold">
+      <h1 className="text-section font-serif font-semibold text-text">
         {title} {runId}
       </h1>
-      <p className="text-muted-foreground">{description}</p>
+      <p className="text-body text-muted">{description}</p>
     </main>
   );
 }
