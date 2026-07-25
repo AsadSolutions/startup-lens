@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
-import { IdeaInput } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { getExampleReports } from "@/lib/api";
 import { READINESS_VERDICT_LABELS, type ReadinessVerdict } from "@/lib/types";
 
@@ -77,10 +77,11 @@ export default async function HomePage() {
             teams research the market, map competitors and investors, score the
             moat, and design a go to market strategy.
           </p>
-          <IdeaInput />
+          <Textarea />
           <p className="text-caption text-muted">
-            A run takes a few minutes and produces automated research, not
-            investment advice.
+            A run takes a few minutes. StartupLens reads your idea and
+            figures out the industry and market on its own. This is
+            automated research, not investment advice.
           </p>
         </div>
       </section>

@@ -3,16 +3,19 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUp } from "lucide-react";
+import { writeStoredIdea } from "@/lib/idea-handoff";
 import { cn } from "@/lib/utils";
 
-export function IdeaInput() {
+export function Textarea() {
   const router = useRouter();
   const [idea, setIdea] = useState("");
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!idea.trim()) return;
+    const trimmed = idea.trim();
+    if (!trimmed) return;
     const runId = crypto.randomUUID();
+    writeStoredIdea(runId, { idea: trimmed, industry: null, geography: null });
     router.push(`/run/${runId}`);
   }
 
