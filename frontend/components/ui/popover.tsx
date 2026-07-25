@@ -20,6 +20,7 @@ export interface PopoverProps {
   children: ReactNode;
   align?: "start" | "end";
   className?: string;
+  "aria-label"?: string;
 }
 
 export function Popover({
@@ -27,6 +28,7 @@ export function Popover({
   children,
   align = "end",
   className,
+  "aria-label": ariaLabel,
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
   const contentId = useId();
@@ -106,6 +108,7 @@ export function Popover({
           ref={contentRef}
           role="dialog"
           aria-modal="true"
+          aria-label={ariaLabel}
           tabIndex={-1}
           className={cn(
             "absolute z-50 mt-2 min-w-48 rounded-card border border-border bg-surface p-2 shadow-card",

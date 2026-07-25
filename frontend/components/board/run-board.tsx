@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { readStoredIdea } from "@/lib/idea-handoff";
 import { TEAM_NAMES, type IdeaSpec } from "@/lib/types";
 import { useRunStream } from "@/lib/use-run-stream";
+import { BoardSkeleton } from "./board-skeleton";
 import { OrchestrationStrip } from "./orchestration-strip";
 import { RunHeader } from "./run-header";
 import { TeamCard } from "./team-card";
@@ -25,6 +26,7 @@ export function RunBoard({ runId }: { runId: string }) {
     return (
       <main className="flex min-h-screen flex-col">
         <Navbar />
+        <BoardSkeleton />
       </main>
     );
   }

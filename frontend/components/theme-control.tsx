@@ -51,6 +51,7 @@ export function ThemeControl() {
     return (
       <Popover
         align="end"
+        aria-label="Theme settings"
         trigger={
           <Button variant="ghost" size="icon" aria-label="Theme settings">
             <Icon className="h-4 w-4" aria-hidden="true" />

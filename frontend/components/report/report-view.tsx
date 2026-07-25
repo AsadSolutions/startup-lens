@@ -7,6 +7,7 @@ import { ContradictionCallout } from "@/components/report/contradiction-callout"
 import { MoatBreakdown } from "@/components/report/moat-breakdown";
 import { ReadinessVerdict } from "@/components/report/readiness-verdict";
 import { ReportHeader } from "@/components/report/report-header";
+import { ReportSkeleton } from "@/components/report/report-skeleton";
 import { TeamSection } from "@/components/report/team-section";
 import { getReport } from "@/lib/api";
 import { TEAM_NAMES, type FinalReport, type TeamName } from "@/lib/types";
@@ -50,6 +51,7 @@ export function ReportView({ runId }: { runId: string }) {
     return (
       <main className="flex min-h-screen flex-col">
         <Navbar />
+        <ReportSkeleton />
       </main>
     );
   }

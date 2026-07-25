@@ -69,7 +69,7 @@ export default async function HomePage() {
           <p className="text-eyebrow font-medium uppercase tracking-eyebrow text-muted">
             Fifteen agents, one verdict.
           </p>
-          <h1 className="font-serif text-title font-semibold text-text sm:text-[2.5rem] sm:leading-[1.15]">
+          <h1 className="font-serif text-title font-semibold text-text sm:text-hero">
             Validate a startup idea in minutes, not weeks.
           </h1>
           <p className="text-body text-muted">
