@@ -9,7 +9,10 @@ export type TeamState =
   | "truncated"
   | "failed";
 
-const stateConfig: Record<TeamState, { label: string; dot: string; text: string }> = {
+const stateConfig: Record<
+  TeamState,
+  { label: string; dot: string; text: string }
+> = {
   queued: { label: "Queued", dot: "bg-muted", text: "text-muted" },
   researching: { label: "Researching", dot: "bg-accent", text: "text-accent" },
   analyzing: { label: "Analyzing", dot: "bg-accent", text: "text-accent" },
@@ -34,7 +37,12 @@ export function StateChip({ state, className }: StateChipProps) {
         className,
       )}
     >
-      <span className={cn("h-1.5 w-1.5 rounded-full transition-colors duration-150 ease-out", config.dot)} />
+      <span
+        className={cn(
+          "h-1.5 w-1.5 rounded-full transition-colors duration-150 ease-out",
+          config.dot,
+        )}
+      />
       {config.label}
     </span>
   );

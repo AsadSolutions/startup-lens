@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { Logo } from "@/components/layout/logo";
 import { ThemeControl } from "@/components/theme-control";
 import { REPO_URL } from "@/lib/config";
+import { cn } from "@/lib/utils";
 
 function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -14,31 +16,47 @@ function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-export function AppShell() {
+const NAV_LINKS = [
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#examples", label: "Examples" },
+];
+
+const navLinkClass =
+  "text-caption text-muted transition-colors duration-150 ease-out hover:text-text";
+
+export function Navbar() {
   const pathname = usePathname();
   const isLanding = pathname === "/";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-bg">
-      <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-6">
-        <div className="flex items-center gap-4">
+    <header className="w-full bg-bg">
+      <div className="mx-auto grid h-14 w-full max-w-[1200px] grid-cols-[1fr_auto_1fr] items-center px-6">
+        <div className="col-start-1 flex items-center gap-4 justify-self-start">
           {!isLanding && (
             <Link
               href="/"
-              className="flex items-center gap-1 text-caption text-muted transition-colors duration-150 ease-out hover:text-text"
+              className={cn("flex items-center gap-1", navLinkClass)}
             >
               <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
               Back
             </Link>
           )}
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/mark.svg" alt="" className="h-7 w-7" />
-            <span className="text-body font-serif font-semibold text-text">
-              Startup<span className="text-accent">Lens</span>
-            </span>
+          <Link href="/" className="flex items-center">
+            <Logo className="h-7 w-auto" />
           </Link>
         </div>
-        <div className="flex items-center gap-1">
+
+        {isLanding && (
+          <nav className="col-start-2 hidden items-center gap-6 justify-self-center sm:flex">
+            {NAV_LINKS.map((link) => (
+              <a key={link.href} href={link.href} className={navLinkClass}>
+                {link.label}
+              </a>
+            ))}
+          </nav>
+        )}
+
+        <div className="col-start-3 flex items-center gap-1 justify-self-end">
           <ThemeControl />
           <a
             href={REPO_URL}

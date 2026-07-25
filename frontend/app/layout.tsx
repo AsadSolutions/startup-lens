@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Lora, Inter, JetBrains_Mono } from "next/font/google";
-import { AppShell } from "@/components/app-shell";
 import { MockDataPill } from "@/components/mock-data-pill";
 import { NO_FLASH_THEME_SCRIPT, ThemeProvider } from "@/lib/theme";
 import "./globals.css";
@@ -46,7 +45,6 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col font-sans">
         <ThemeProvider>
-          <AppShell />
           {children}
           <footer className="mt-auto flex items-center justify-end px-6 py-3">
             <MockDataPill />

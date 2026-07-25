@@ -1,4 +1,12 @@
 <svg viewBox="0 0 900 660" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .sl-title { fill: #1F1E1D; }
+    .sl-subtitle { fill: #6E6A63; }
+    @media (prefers-color-scheme: dark) {
+      .sl-title { fill: #F0EEE9; }
+      .sl-subtitle { fill: #A8A49C; }
+    }
+  </style>
   <g transform="translate(336,40) scale(0.49)">
     <g stroke="#6E56CF" fill="none" stroke-linecap="round">
       <circle cx="228" cy="228" r="126" stroke-width="34"/>
@@ -14,7 +22,7 @@
   </g>
   <text x="450" y="450" text-anchor="middle" font-family="Lora, Georgia, serif"
         font-size="92" font-weight="600" letter-spacing="-1"
-        fill="#1F1E1D">Startup<tspan fill="#6E56CF">Lens</tspan></text>
+        class="sl-title">Startup<tspan fill="#6E56CF">Lens</tspan></text>
   <text x="450" y="524" text-anchor="middle" font-family="Lora, Georgia, serif"
-        font-size="34" font-style="italic" fill="#6E6A63">Fifteen agents, one verdict.</text>
+        font-size="34" font-style="italic" class="sl-subtitle">Fifteen agents, one verdict.</text>
 </svg>

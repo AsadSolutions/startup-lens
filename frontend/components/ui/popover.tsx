@@ -22,7 +22,12 @@ export interface PopoverProps {
   className?: string;
 }
 
-export function Popover({ trigger, children, align = "end", className }: PopoverProps) {
+export function Popover({
+  trigger,
+  children,
+  align = "end",
+  className,
+}: PopoverProps) {
   const [open, setOpen] = useState(false);
   const contentId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -33,7 +38,10 @@ export function Popover({ trigger, children, align = "end", className }: Popover
     if (!open) return;
 
     function onPointerDown(e: PointerEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     }
@@ -45,7 +53,8 @@ export function Popover({ trigger, children, align = "end", className }: Popover
         return;
       }
       if (e.key === "Tab" && contentRef.current) {
-        const focusable = contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+        const focusable =
+          contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
         if (focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
@@ -59,7 +68,8 @@ export function Popover({ trigger, children, align = "end", className }: Popover
       }
     }
 
-    const focusable = contentRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    const focusable =
+      contentRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
     (focusable ?? contentRef.current)?.focus();
 
     document.addEventListener("pointerdown", onPointerDown);
@@ -73,7 +83,9 @@ export function Popover({ trigger, children, align = "end", className }: Popover
   const triggerElement = isValidElement(trigger)
     ? cloneElement(trigger as ReactElement<Record<string, unknown>>, {
         onClick: (e: React.MouseEvent) => {
-          (trigger.props as { onClick?: (e: React.MouseEvent) => void }).onClick?.(e);
+          (
+            trigger.props as { onClick?: (e: React.MouseEvent) => void }
+          ).onClick?.(e);
           setOpen((o) => !o);
         },
         "aria-haspopup": "dialog",

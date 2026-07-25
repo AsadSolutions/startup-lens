@@ -1,7 +1,6 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
   <img src="assets/logo.svg" alt="StartupLens" width="420">
 </picture>
 

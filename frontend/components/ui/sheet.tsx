@@ -26,7 +26,8 @@ export function Sheet({ open, onClose, children, title }: SheetProps) {
         return;
       }
       if (e.key === "Tab" && panelRef.current) {
-        const focusable = panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+        const focusable =
+          panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
         if (focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
@@ -43,7 +44,8 @@ export function Sheet({ open, onClose, children, title }: SheetProps) {
     document.addEventListener("keydown", onKeyDown);
     document.body.style.overflow = "hidden";
 
-    const focusable = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    const focusable =
+      panelRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
     (focusable ?? panelRef.current)?.focus();
 
     return () => {
@@ -57,7 +59,11 @@ export function Sheet({ open, onClose, children, title }: SheetProps) {
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-text/20" onClick={onClose} aria-hidden="true" />
+      <div
+        className="absolute inset-0 bg-text/20"
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <div
         ref={panelRef}
         role="dialog"
@@ -66,7 +72,9 @@ export function Sheet({ open, onClose, children, title }: SheetProps) {
         tabIndex={-1}
         className="absolute inset-x-0 bottom-0 rounded-t-card border-t border-border bg-surface p-4 shadow-card"
       >
-        {title && <h2 className="mb-3 text-body font-medium text-text">{title}</h2>}
+        {title && (
+          <h2 className="mb-3 text-body font-medium text-text">{title}</h2>
+        )}
         {children}
       </div>
     </div>
