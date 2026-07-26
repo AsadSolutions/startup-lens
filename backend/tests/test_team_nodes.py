@@ -1,10 +1,11 @@
-from app.graph.team import analyst_node, researcher_node, writer_node
+from app.graph.team import analyst_node, researcher_node, run_team, writer_node
 from app.models import (
     Analysis,
     ResearchFinding,
     ResearchFindings,
     SourceRef,
     TeamBrief,
+    TeamFailure,
     TeamName,
     TeamReport,
 )
@@ -111,3 +112,102 @@ async def test_writer_node_produces_team_report_from_analysis_and_sources():
     assert result == fake_report
     assert seen["schema"] is TeamReport
     assert "Demand is rising" in seen["prompt"]
+
+
+async def _fake_search(query: str) -> list[dict]:
+    return [{"title": "Report", "url": "https://example.com", "content": "..."}]
+
+
+def _fake_call_llm_all_steps():
+    async def call_llm(schema, prompt):
+        if schema is ResearchFindings:
+            return ResearchFindings(
+                team=BRIEF.team,
+                findings=[
+                    ResearchFinding(
+                        summary="Market is growing",
+                        source=SourceRef(title="Report", url="https://example.com"),
+                        snippet="...",
+                    )
+                ],
+            )
+        if schema is Analysis:
+            return Analysis(
+                team=BRIEF.team, key_insights=["Demand is rising"], risks=["Niche"]
+            )
+        if schema is TeamReport:
+            return TeamReport(
+                team=BRIEF.team,
+                summary="Summary",
+                key_insights=["Demand is rising"],
+                risks=["Niche"],
+                sources=[SourceRef(title="Report", url="https://example.com")],
+            )
+        raise AssertionError(f"unexpected schema {schema}")
+
+    return call_llm
+
+
+async def test_run_team_returns_full_report_when_within_budget():
+    result = await run_team(
+        BRIEF,
+        search=_fake_search,
+        call_llm=_fake_call_llm_all_steps(),
+        token_budget=1_000_000,
+        timeout_seconds=30,
+    )
+    assert isinstance(result, TeamReport)
+    assert result.truncated is False
+
+
+async def test_run_team_truncates_and_skips_analyst_when_token_budget_exceeded():
+    seen_schemas = []
+
+    async def call_llm(schema, prompt):
+        seen_schemas.append(schema)
+        if schema is ResearchFindings:
+            return ResearchFindings(
+                team=BRIEF.team,
+                findings=[
+                    ResearchFinding(
+                        summary="Market is growing",
+                        source=SourceRef(title="Report", url="https://example.com"),
+                        snippet="...",
+                    )
+                ],
+            )
+        if schema is TeamReport:
+            return TeamReport(
+                team=BRIEF.team,
+                summary="Summary",
+                key_insights=["Demand is rising"],
+                risks=["Niche"],
+                sources=[SourceRef(title="Report", url="https://example.com")],
+                truncated=False,  # the wrapper must override this, not trust the LLM
+            )
+        raise AssertionError(f"unexpected schema {schema}: analyst should be skipped")
+
+    result = await run_team(
+        BRIEF,
+        search=_fake_search,
+        call_llm=call_llm,
+        token_budget=1,  # any real findings JSON blows past this
+        timeout_seconds=30,
+    )
+
+    assert isinstance(result, TeamReport)
+    assert result.truncated is True
+    assert Analysis not in seen_schemas
+
+
+async def test_run_team_returns_team_failure_when_a_step_raises():
+    async def crashing_search(query: str) -> list[dict]:
+        raise RuntimeError("search API down")
+
+    result = await run_team(
+        BRIEF, search=crashing_search, call_llm=_fake_call_llm_all_steps()
+    )
+
+    assert isinstance(result, TeamFailure)
+    assert result.team == BRIEF.team
+    assert "search API down" in result.error

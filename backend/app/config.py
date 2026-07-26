@@ -12,6 +12,7 @@ class Settings(BaseSettings):
         "researcher": "gpt-4o-mini",
         "analyst": "gpt-4o",
         "writer": "gpt-4o-mini",
+        "composer": "gpt-4o",
     }
     team_token_budget: int = 20_000
     team_timeout_seconds: int = 90

@@ -2,7 +2,7 @@ from datetime import date
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class TeamName(StrEnum):
@@ -39,6 +39,19 @@ class TeamBrief(BaseModel):
     key_questions: list[str]
 
 
+class TeamBriefSet(BaseModel):
+    briefs: list[TeamBrief]
+
+    @model_validator(mode="after")
+    def _exactly_one_brief_per_team(self) -> "TeamBriefSet":
+        teams = [b.team for b in self.briefs]
+        if set(teams) != set(TeamName) or len(teams) != len(TeamName):
+            raise ValueError(
+                f"expected exactly one TeamBrief per team, got teams={teams}"
+            )
+        return self
+
+
 class ResearchFinding(BaseModel):
     summary: str
     source: SourceRef
@@ -70,11 +83,22 @@ class TeamFailure(BaseModel):
     error: str
 
 
+class Contradiction(BaseModel):
+    teams: list[TeamName]
+    description: str
+
+
+class ComposerSynthesis(BaseModel):
+    executive_summary: str
+    contradictions: list[Contradiction] = Field(default_factory=list)
+
+
 class FinalReport(BaseModel):
     idea: IdeaSpec
     executive_summary: str
     team_reports: list[TeamReport]
     team_failures: list[TeamFailure] = Field(default_factory=list)
+    contradictions: list[Contradiction] = Field(default_factory=list)
 
 
 class SSEEventType(StrEnum):

@@ -27,11 +27,13 @@ def fake_report() -> TeamReport:
 @pytest.fixture(autouse=True)
 def patch_pipeline(monkeypatch, fake_report):
     async def fake_planner(idea):
-        return TeamBrief(
-            team=TeamName.MARKET_RESEARCH,
-            focus="Focus",
-            key_questions=["Q1"],
-        )
+        return {
+            TeamName.MARKET_RESEARCH: TeamBrief(
+                team=TeamName.MARKET_RESEARCH,
+                focus="Focus",
+                key_questions=["Q1"],
+            )
+        }
 
     async def fake_run_team_streaming(brief):
         findings = ResearchFindings(

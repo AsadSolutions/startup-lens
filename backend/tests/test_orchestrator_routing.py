@@ -1,7 +1,7 @@
 import pytest
 
 from app.graph.orchestrator import intake, planner
-from app.models import IdeaSpec, TeamBrief, TeamName
+from app.models import IdeaSpec, TeamBrief, TeamBriefSet, TeamName
 
 
 def test_intake_rejects_blank_idea():
@@ -14,11 +14,16 @@ def test_intake_normalizes_idea_text():
     assert idea.idea == "A marketplace for vintage synths"
 
 
-async def test_planner_produces_market_research_brief_from_faked_llm():
-    fake_brief = TeamBrief(
-        team=TeamName.MARKET_RESEARCH,
-        focus="Size the vintage synth resale market",
-        key_questions=["How big is the used gear market?"],
+async def test_planner_produces_a_brief_for_every_team_from_faked_llm():
+    fake_brief_set = TeamBriefSet(
+        briefs=[
+            TeamBrief(
+                team=t,
+                focus=f"Focus for {t.value}",
+                key_questions=[f"Key question for {t.value}?"],
+            )
+            for t in TeamName
+        ]
     )
 
     captured_prompt = {}
@@ -26,13 +31,14 @@ async def test_planner_produces_market_research_brief_from_faked_llm():
     async def fake_call_llm(schema, prompt):
         captured_prompt["schema"] = schema
         captured_prompt["prompt"] = prompt
-        return fake_brief
+        return fake_brief_set
 
     idea = IdeaSpec(idea="A marketplace for vintage synths")
-    brief = await planner(idea, call_llm=fake_call_llm)
+    briefs = await planner(idea, call_llm=fake_call_llm)
 
-    assert brief == fake_brief
-    assert captured_prompt["schema"] is TeamBrief
+    assert set(briefs.keys()) == set(TeamName)
+    assert briefs[TeamName.MOAT_SCORING].focus == "Focus for moat_scoring"
+    assert captured_prompt["schema"] is TeamBriefSet
     assert "A marketplace for vintage synths" in captured_prompt["prompt"]
     # No separate industry/geography input: the prompt instructs inference
     # from the idea text itself instead of asking for those as fields.

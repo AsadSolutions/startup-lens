@@ -4,6 +4,8 @@ from pydantic import ValidationError
 from app.models import (
     AgentUpdateEvent,
     Analysis,
+    ComposerSynthesis,
+    Contradiction,
     FinalReport,
     IdeaSpec,
     NodeName,
@@ -12,6 +14,7 @@ from app.models import (
     ResearchFindings,
     SourceRef,
     TeamBrief,
+    TeamBriefSet,
     TeamCompletedEvent,
     TeamFailure,
     TeamName,
@@ -67,6 +70,34 @@ def test_team_failure_requires_error():
         TeamFailure(team=TeamName.MARKET_RESEARCH)
 
 
+def test_team_brief_set_requires_exactly_one_brief_per_team():
+    with pytest.raises(ValidationError):
+        TeamBriefSet(
+            briefs=[
+                TeamBrief(team=TeamName.MARKET_RESEARCH, focus="f", key_questions=["q"])
+            ]
+        )
+
+
+def test_team_brief_set_accepts_one_brief_per_team():
+    briefs = TeamBriefSet(
+        briefs=[
+            TeamBrief(team=t, focus="f", key_questions=["q"]) for t in TeamName
+        ]
+    )
+    assert {b.team for b in briefs.briefs} == set(TeamName)
+
+
+def test_contradiction_requires_teams_and_description():
+    with pytest.raises(ValidationError):
+        Contradiction(teams=[TeamName.MARKET_RESEARCH])
+
+
+def test_composer_synthesis_defaults_no_contradictions():
+    synthesis = ComposerSynthesis(executive_summary="Summary.")
+    assert synthesis.contradictions == []
+
+
 def test_analysis_requires_team():
     with pytest.raises(ValidationError):
         Analysis(key_insights=[], risks=[])
@@ -89,6 +120,15 @@ def test_final_report_defaults_no_failures():
         team_reports=[_fake_report()],
     )
     assert report.team_failures == []
+
+
+def test_final_report_defaults_no_contradictions():
+    report = FinalReport(
+        idea=IdeaSpec(idea="A marketplace for vintage synths"),
+        executive_summary="Looks promising.",
+        team_reports=[_fake_report()],
+    )
+    assert report.contradictions == []
 
 
 def test_final_report_holds_failures():

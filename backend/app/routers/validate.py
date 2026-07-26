@@ -11,6 +11,7 @@ from app.models import (
     NodeName,
     ReportReadyEvent,
     TeamCompletedEvent,
+    TeamName,
     TeamStartedEvent,
 )
 
@@ -29,7 +30,8 @@ class ValidateRequest(BaseModel):
 @router.post("/api/validate", response_class=EventSourceResponse)
 async def validate(request: ValidateRequest) -> AsyncIterable[ServerSentEvent]:
     idea = intake(request.idea)
-    brief = await planner(idea)
+    briefs = await planner(idea)
+    brief = briefs[TeamName.MARKET_RESEARCH]
 
     yield ServerSentEvent(
         data=TeamStartedEvent(team=brief.team).model_dump_json(),
