@@ -25,8 +25,6 @@ class NodeName(StrEnum):
 
 class IdeaSpec(BaseModel):
     idea: str
-    industry: str | None = None
-    geography: str | None = None
 
 
 class SourceRef(BaseModel):

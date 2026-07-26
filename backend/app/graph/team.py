@@ -1,4 +1,4 @@
-from typing import AsyncIterator
+from typing import AsyncIterator, Awaitable, Callable, TypeVar
 
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel
@@ -6,6 +6,10 @@ from pydantic import BaseModel
 from app.graph.llm import llm_for_role, structured_call
 from app.mcp.client import web_search
 from app.models import Analysis, NodeName, ResearchFindings, TeamBrief, TeamReport
+
+SchemaT = TypeVar("SchemaT", bound=BaseModel)
+CallLLM = Callable[[type[SchemaT], str], Awaitable[SchemaT]]
+Search = Callable[[str], Awaitable[list[dict]]]
 
 
 class TeamState(BaseModel):
@@ -15,9 +19,20 @@ class TeamState(BaseModel):
     report: TeamReport | None = None
 
 
-async def researcher_node(brief: TeamBrief) -> ResearchFindings:
+def _default_call_llm(role: str) -> CallLLM:
+    llm = llm_for_role(role)
+    return lambda schema, prompt: structured_call(llm, schema, prompt)
+
+
+async def researcher_node(
+    brief: TeamBrief,
+    *,
+    search: Search = web_search,
+    call_llm: CallLLM | None = None,
+) -> ResearchFindings:
+    call_llm = call_llm or _default_call_llm("researcher")
     query = f"{brief.focus} {' '.join(brief.key_questions)}"
-    raw_results = await web_search(query)
+    raw_results = await search(query)
     prompt = (
         f"Team: {brief.team}\nFocus: {brief.focus}\n"
         f"Key questions: {brief.key_questions}\n\n"
@@ -25,21 +40,32 @@ async def researcher_node(brief: TeamBrief) -> ResearchFindings:
         "Extract the relevant findings as ResearchFindings: for each finding, "
         "a one sentence summary, the source (title/url), and a short snippet."
     )
-    return await structured_call(llm_for_role("researcher"), ResearchFindings, prompt)
+    return await call_llm(ResearchFindings, prompt)
 
 
-async def analyst_node(brief: TeamBrief, findings: ResearchFindings) -> Analysis:
+async def analyst_node(
+    brief: TeamBrief,
+    findings: ResearchFindings,
+    *,
+    call_llm: CallLLM | None = None,
+) -> Analysis:
+    call_llm = call_llm or _default_call_llm("analyst")
     prompt = (
         f"Team: {brief.team}\nFocus: {brief.focus}\n\n"
         f"Research findings:\n{findings.model_dump_json(indent=2)}\n\n"
         "Analyze these findings: produce key_insights and risks."
     )
-    return await structured_call(llm_for_role("analyst"), Analysis, prompt)
+    return await call_llm(Analysis, prompt)
 
 
 async def writer_node(
-    brief: TeamBrief, findings: ResearchFindings, analysis: Analysis
+    brief: TeamBrief,
+    findings: ResearchFindings,
+    analysis: Analysis,
+    *,
+    call_llm: CallLLM | None = None,
 ) -> TeamReport:
+    call_llm = call_llm or _default_call_llm("writer")
     sources = [f.source.model_dump() for f in findings.findings]
     prompt = (
         f"Team: {brief.team}\n\n"
@@ -48,7 +74,7 @@ async def writer_node(
         "Write the final TeamReport: summary, key_insights, risks, sources "
         "(reuse the available sources), truncated=false."
     )
-    return await structured_call(llm_for_role("writer"), TeamReport, prompt)
+    return await call_llm(TeamReport, prompt)
 
 
 async def _researcher_wrapper(state: TeamState) -> dict:
@@ -80,9 +106,7 @@ def build_team_graph():
 _team_graph = build_team_graph()
 
 
-async def run_team_streaming(
-    brief: TeamBrief,
-) -> AsyncIterator[tuple[str, dict]]:
+async def run_team_streaming(brief: TeamBrief) -> AsyncIterator[tuple[str, dict]]:
     async for update in _team_graph.astream(
         TeamState(brief=brief), stream_mode="updates"
     ):

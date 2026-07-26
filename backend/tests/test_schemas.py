@@ -2,15 +2,21 @@ import pytest
 from pydantic import ValidationError
 
 from app.models import (
+    AgentUpdateEvent,
     Analysis,
+    FinalReport,
     IdeaSpec,
+    NodeName,
+    ReportReadyEvent,
     ResearchFinding,
     ResearchFindings,
     SourceRef,
     TeamBrief,
+    TeamCompletedEvent,
     TeamFailure,
     TeamName,
     TeamReport,
+    TeamStartedEvent,
 )
 
 
@@ -19,10 +25,11 @@ def test_idea_spec_requires_idea_text():
         IdeaSpec()
 
 
-def test_idea_spec_defaults_are_optional():
+def test_idea_spec_has_no_separate_industry_or_geography_fields():
     idea = IdeaSpec(idea="A marketplace for vintage synths")
-    assert idea.industry is None
-    assert idea.geography is None
+    assert "industry" not in IdeaSpec.model_fields
+    assert "geography" not in IdeaSpec.model_fields
+    assert idea.idea == "A marketplace for vintage synths"
 
 
 def test_team_brief_round_trip():
@@ -63,3 +70,68 @@ def test_team_failure_requires_error():
 def test_analysis_requires_team():
     with pytest.raises(ValidationError):
         Analysis(key_insights=[], risks=[])
+
+
+def _fake_report() -> TeamReport:
+    return TeamReport(
+        team=TeamName.MARKET_RESEARCH,
+        summary="Summary",
+        key_insights=["Insight"],
+        risks=["Risk"],
+        sources=[SourceRef(title="Report")],
+    )
+
+
+def test_final_report_defaults_no_failures():
+    report = FinalReport(
+        idea=IdeaSpec(idea="A marketplace for vintage synths"),
+        executive_summary="Looks promising.",
+        team_reports=[_fake_report()],
+    )
+    assert report.team_failures == []
+
+
+def test_final_report_holds_failures():
+    failure = TeamFailure(team=TeamName.MARKET_RESEARCH, error="crashed")
+    report = FinalReport(
+        idea=IdeaSpec(idea="A marketplace for vintage synths"),
+        executive_summary="Partial run.",
+        team_reports=[],
+        team_failures=[failure],
+    )
+    assert report.team_failures == [failure]
+
+
+def test_team_started_event_carries_team():
+    event = TeamStartedEvent(team=TeamName.MARKET_RESEARCH)
+    assert event.type == "team_started"
+
+
+def test_agent_update_event_carries_team_agent_and_message():
+    event = AgentUpdateEvent(
+        team=TeamName.MARKET_RESEARCH,
+        agent=NodeName.RESEARCHER,
+        message="researcher completed",
+    )
+    assert event.type == "agent_update"
+    assert event.agent == NodeName.RESEARCHER
+
+
+def test_team_completed_event_can_carry_a_report():
+    event = TeamCompletedEvent(team=TeamName.MARKET_RESEARCH, report=_fake_report())
+    assert event.type == "team_completed"
+    assert event.failure is None
+
+
+def test_team_completed_event_can_carry_a_failure():
+    failure = TeamFailure(team=TeamName.MARKET_RESEARCH, error="crashed")
+    event = TeamCompletedEvent(team=TeamName.MARKET_RESEARCH, failure=failure)
+    assert event.report is None
+    assert event.failure == failure
+
+
+def test_report_ready_event_requires_a_report():
+    with pytest.raises(ValidationError):
+        ReportReadyEvent()
+    event = ReportReadyEvent(report=_fake_report())
+    assert event.type == "report_ready"

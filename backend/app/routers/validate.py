@@ -19,8 +19,6 @@ router = APIRouter()
 
 class ValidateRequest(BaseModel):
     idea: str
-    industry: str | None = None
-    geography: str | None = None
 
     @field_validator("idea")
     @classmethod
@@ -30,7 +28,7 @@ class ValidateRequest(BaseModel):
 
 @router.post("/api/validate", response_class=EventSourceResponse)
 async def validate(request: ValidateRequest) -> AsyncIterable[ServerSentEvent]:
-    idea = intake(request.idea, request.industry, request.geography)
+    idea = intake(request.idea)
     brief = await planner(idea)
 
     yield ServerSentEvent(
