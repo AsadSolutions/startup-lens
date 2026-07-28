@@ -9,10 +9,16 @@ MCP_SERVERS = {
         "command": "python",
         "args": ["-m", "app.mcp.web_search"],
         "transport": "stdio",
-    }
+    },
+    "python_sandbox": {
+        "command": "python",
+        "args": ["-m", "app.mcp.sandbox"],
+        "transport": "stdio",
+    },
 }
 
 _web_search_tool: BaseTool | None = None
+_sandbox_tool: BaseTool | None = None
 _tool_lock = asyncio.Lock()
 
 
@@ -46,3 +52,30 @@ async def web_search(query: str, max_results: int = 5) -> list[dict]:
     else:
         text = raw
     return json.loads(text)
+
+
+async def _get_sandbox_tool() -> BaseTool:
+    global _sandbox_tool
+    if _sandbox_tool is not None:
+        return _sandbox_tool
+    async with _tool_lock:
+        if _sandbox_tool is None:
+            client = MultiServerMCPClient(MCP_SERVERS)
+            tools = await client.get_tools()
+            _sandbox_tool = next(t for t in tools if t.name == "run_calculation")
+    return _sandbox_tool
+
+
+async def run_sandbox_calculation(expression: str) -> dict:
+    """The only entry point agents use for sandboxed calculations (CLAUDE.md rule 6)."""
+    tool = await _get_sandbox_tool()
+    raw = await tool.ainvoke({"expression": expression})
+    if isinstance(raw, list):
+        text = "".join(
+            block["text"]
+            for block in raw
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
+    else:
+        text = raw
+    return json.loads(text) if isinstance(text, str) else text

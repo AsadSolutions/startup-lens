@@ -103,6 +103,23 @@ def test_analysis_requires_team():
         Analysis(key_insights=[], risks=[])
 
 
+def test_analysis_supports_optional_follow_up_and_calculation_fields():
+    bare = Analysis(team=TeamName.MOAT_SCORING, key_insights=["i"], risks=["r"])
+    assert bare.follow_up_query is None
+    assert bare.calculation_expression is None
+    assert bare.calculation_result is None
+
+    full = Analysis(
+        team=TeamName.MOAT_SCORING,
+        key_insights=["i"],
+        risks=["r"],
+        follow_up_query="What is Acme Corp's latest funding round?",
+        calculation_expression="5 * 0.2",
+        calculation_result="1.0",
+    )
+    assert full.follow_up_query == "What is Acme Corp's latest funding round?"
+
+
 def _fake_report() -> TeamReport:
     return TeamReport(
         team=TeamName.MARKET_RESEARCH,

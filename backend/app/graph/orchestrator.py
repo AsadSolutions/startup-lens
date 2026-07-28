@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.graph.checkpoint import get_checkpointer
 from app.graph.llm import llm_for_role, structured_call
-from app.graph.team import Search, run_team
+from app.graph.team import Retrieve, Search, run_team
 from app.mcp.client import web_search
 from app.models import (
     ComposerSynthesis,
@@ -124,6 +124,7 @@ def build_orchestrator_graph(
     planner_call_llm: CallLLM | None = None,
     team_call_llm_factory: Callable[[TeamName], CallLLM | None] | None = None,
     team_search: Search = web_search,
+    team_retrieve_factory: Callable[[TeamName], Retrieve | None] | None = None,
     composer_call_llm: CallLLM | None = None,
 ):
     """Builds the Phase 2 orchestrator graph: intake -> planner -> Send()
@@ -151,7 +152,8 @@ def build_orchestrator_graph(
         # explicitly here.
         brief = _TeamDispatch.model_validate(state).brief
         call_llm = team_call_llm_factory(brief.team) if team_call_llm_factory else None
-        result = await run_team(brief, search=team_search, call_llm=call_llm)
+        retrieve = team_retrieve_factory(brief.team) if team_retrieve_factory else None
+        result = await run_team(brief, search=team_search, retrieve=retrieve, call_llm=call_llm)
         return {"team_results": [result]}
 
     async def _fan_in_node(state: RunState) -> dict:

@@ -7,19 +7,35 @@ from pydantic import BaseModel
 
 from app.config import settings
 from app.graph.llm import llm_for_role, structured_call
-from app.mcp.client import web_search
+from app.mcp.client import run_sandbox_calculation, web_search
 from app.models import (
     Analysis,
     NodeName,
+    ResearchFinding,
     ResearchFindings,
     TeamBrief,
     TeamFailure,
+    TeamName,
     TeamReport,
 )
 
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
 CallLLM = Callable[[type[SchemaT], str], Awaitable[SchemaT]]
 Search = Callable[[str], Awaitable[list[dict]]]
+Retrieve = Callable[[str, int], Awaitable[list[ResearchFinding]]]
+Calculate = Callable[[str], Awaitable[dict]]
+
+
+def _default_retrieve(team: TeamName) -> Retrieve:
+    import functools
+
+    from app.rag.retrieve import retrieve_for_team
+
+    return functools.partial(retrieve_for_team, team)
+
+
+def _default_calculate() -> Calculate:
+    return run_sandbox_calculation
 
 
 class TeamState(BaseModel):
@@ -38,19 +54,43 @@ async def researcher_node(
     brief: TeamBrief,
     *,
     search: Search = web_search,
+    retrieve: Retrieve | None = None,
     call_llm: CallLLM | None = None,
 ) -> ResearchFindings:
     call_llm = call_llm or _default_call_llm("researcher")
+    retrieve = retrieve or _default_retrieve(brief.team)
     query = f"{brief.focus} {' '.join(brief.key_questions)}"
-    raw_results = await search(query)
+    raw_results, rag_hits = await asyncio.gather(search(query), retrieve(query, 1))
     prompt = (
         f"Team: {brief.team}\nFocus: {brief.focus}\n"
         f"Key questions: {brief.key_questions}\n\n"
         f"Raw web search results (JSON):\n{raw_results}\n\n"
-        "Extract the relevant findings as ResearchFindings: for each finding, "
-        "a one sentence summary, the source (title/url), and a short snippet."
+        "Curated knowledge base hits for this team (JSON):\n"
+        f"{[hit.model_dump() for hit in rag_hits]}\n\n"
+        "Extract the relevant findings as ResearchFindings, fusing both "
+        "sources: for each finding, a one sentence summary, the source "
+        "(title/url/published), and a short snippet."
     )
     return await call_llm(ResearchFindings, prompt)
+
+
+def _analyst_prompt(brief: TeamBrief, findings: ResearchFindings, hop: int, max_hops: int) -> str:
+    remaining = max_hops - hop
+    return (
+        f"Team: {brief.team}\nFocus: {brief.focus}\n\n"
+        f"Research findings so far (hop {hop} of {max_hops}):\n"
+        f"{findings.model_dump_json(indent=2)}\n\n"
+        "Analyze these findings: produce key_insights and risks. If a "
+        "specific piece of missing information would meaningfully improve "
+        "this analysis (for example, a competitor mentioned above but "
+        f"missing its funding), and {remaining} follow-up hop(s) remain, set "
+        "follow_up_query to one specific search query for it; otherwise "
+        "leave follow_up_query null. If a calculation would help (market "
+        "sizing arithmetic, score aggregation), set calculation_expression "
+        "to a single arithmetic expression whose value is the answer — no "
+        "assignments or statements, only numbers, the operators "
+        "+ - * / // % **, and calls to abs/min/max/round/sum/len/pow/sqrt/mean."
+    )
 
 
 async def analyst_node(
@@ -58,14 +98,37 @@ async def analyst_node(
     findings: ResearchFindings,
     *,
     call_llm: CallLLM | None = None,
+    retrieve: Retrieve | None = None,
+    calculate: Calculate | None = None,
+    max_hops: int | None = None,
 ) -> Analysis:
+    """Reasons over findings and may (a) issue follow-up RAG retrievals based
+    on what it's seen so far, capped at `max_hops` total hops including the
+    researcher's initial one (ENGINEERING_PRINCIPLES.md #3), and (b) run a
+    calculation in the MCP sandbox. The LLM decides *what* to ask for or
+    calculate; the loop bound and whether the sandbox actually runs is code,
+    never the model (ENGINEERING_PRINCIPLES.md #1, the determinism boundary)."""
     call_llm = call_llm or _default_call_llm("analyst")
-    prompt = (
-        f"Team: {brief.team}\nFocus: {brief.focus}\n\n"
-        f"Research findings:\n{findings.model_dump_json(indent=2)}\n\n"
-        "Analyze these findings: produce key_insights and risks."
-    )
-    return await call_llm(Analysis, prompt)
+    retrieve = retrieve or _default_retrieve(brief.team)
+    calculate = calculate or _default_calculate()
+    max_hops = max_hops if max_hops is not None else settings.rag_max_hops
+
+    hop = 1
+    current_findings = findings
+    analysis = await call_llm(Analysis, _analyst_prompt(brief, current_findings, hop, max_hops))
+    while analysis.follow_up_query and hop < max_hops:
+        hop += 1
+        new_findings = await retrieve(analysis.follow_up_query, hop)
+        current_findings = ResearchFindings(
+            team=findings.team, findings=current_findings.findings + new_findings
+        )
+        analysis = await call_llm(Analysis, _analyst_prompt(brief, current_findings, hop, max_hops))
+
+    if analysis.calculation_expression:
+        outcome = await calculate(analysis.calculation_expression)
+        analysis = analysis.model_copy(update={"calculation_result": str(outcome.get("result"))})
+
+    return analysis
 
 
 async def writer_node(
@@ -105,6 +168,8 @@ async def run_team(
     brief: TeamBrief,
     *,
     search: Search = web_search,
+    retrieve: Retrieve | None = None,
+    calculate: Calculate | None = None,
     call_llm: CallLLM | None = None,
     token_budget: int | None = None,
     timeout_seconds: float | None = None,
@@ -132,12 +197,14 @@ async def run_team(
 
         async def _gather() -> None:
             nonlocal findings, analysis, tokens_used, truncated
-            findings = await researcher_node(brief, search=search, call_llm=call_llm)
+            findings = await researcher_node(brief, search=search, retrieve=retrieve, call_llm=call_llm)
             tokens_used += _estimate_tokens(findings)
             if tokens_used >= token_budget:
                 truncated = True
                 return
-            analysis = await analyst_node(brief, findings, call_llm=call_llm)
+            analysis = await analyst_node(
+                brief, findings, call_llm=call_llm, retrieve=retrieve, calculate=calculate
+            )
             tokens_used += _estimate_tokens(analysis)
             if tokens_used >= token_budget:
                 truncated = True

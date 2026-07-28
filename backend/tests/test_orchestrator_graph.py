@@ -63,6 +63,10 @@ async def _fake_search(query: str) -> list[dict]:
     return [{"title": "t", "url": "https://example.com", "content": "..."}]
 
 
+async def _fake_retrieve(query: str, hop: int) -> list:
+    return []
+
+
 async def _fake_composer_call_llm(schema, prompt):
     assert schema is ComposerSynthesis
     return ComposerSynthesis(
@@ -80,6 +84,7 @@ async def test_orchestrator_run_completes_with_four_reports_and_a_visible_failur
         planner_call_llm=_fake_planner_call_llm,
         team_call_llm_factory=team_call_llm_factory,
         team_search=_fake_search,
+        team_retrieve_factory=lambda team: _fake_retrieve,
         composer_call_llm=_fake_composer_call_llm,
     )
 
@@ -105,6 +110,7 @@ async def test_orchestrator_run_truncates_a_team_that_exceeds_its_token_budget()
             planner_call_llm=_fake_planner_call_llm,
             team_call_llm_factory=lambda team: _good_team_call_llm(team),
             team_search=_fake_search,
+            team_retrieve_factory=lambda team: _fake_retrieve,
             composer_call_llm=_fake_composer_call_llm,
         )
 

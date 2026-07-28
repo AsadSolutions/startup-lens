@@ -64,9 +64,20 @@ class ResearchFindings(BaseModel):
 
 
 class Analysis(BaseModel):
+    """follow_up_query/calculation_expression are optionally set by the
+    analyst LLM itself (its own judgment call); calculation_result is filled
+    in by code after evaluating the analyst's requested expression in the
+    MCP sandbox, never written by the LLM directly (ARCHITECTURE.md:
+    multi-hop retrieval, the python sandbox, and the determinism boundary
+    between the two). calculation_expression is a single arithmetic
+    expression (no assignments/statements) — see app/mcp/sandbox.py."""
+
     team: TeamName
     key_insights: list[str]
     risks: list[str]
+    follow_up_query: str | None = None
+    calculation_expression: str | None = None
+    calculation_result: str | None = None
 
 
 class TeamReport(BaseModel):
